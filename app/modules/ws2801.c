@@ -36,7 +36,7 @@ static __inline__ void ws2801_byte(u8 n) {
     }
 }
 
-static void ws2801_strip(u8 const * data, uint16_t len) {
+static void ws2801_strip(u8 const * data, u16 len) {
     while (len--) {
         ws2801_byte(*(data++));
     }
@@ -63,7 +63,7 @@ static void enable_pin_mux(pin) {
     }
 }
 
-static u32 ws2801_init_gpio(lua_State* L, u32 pin_clk, uint32_t pin_data) {
+static u32 ws2801_init_gpio(lua_State* L, u32 pin_clk, u32 pin_data) {
     ws2801_hspi_mode = 0;
     ws2801_bit_clk = 1 << pin_clk;
     ws2801_bit_data = 1 << pin_data;
@@ -84,7 +84,7 @@ static u32 ws2801_init_gpio(lua_State* L, u32 pin_clk, uint32_t pin_data) {
     return 0;
 }
 
-static void ws2801_strip_hspi(u8 const * data, uint16_t len) {
+static void ws2801_strip_hspi(u8 const * data, u16 len) {
     while (len--) {
         platform_spi_send_recv(1, *(data++));
     }
@@ -111,14 +111,14 @@ static u32 ws2801_init_hspi(lua_State* L) {
 static int ws2801_init_lua(lua_State* L) {
     u32 res;
 
-    if (lua_is_number(L, 1)) {
-        if (lua_is_number(L, 2)) {
+    if (lua_isnumber(L, 1)) {
+        if (lua_isnumber(L, 2)) {
             u32 pin_clk, pin_data;
             pin_clk = luaL_checkinteger(L, 1);
             pin_data = luaL_checkinteger(L, 2);
             res = ws2801_init_gpio(L, pin_clk, pin_data);
         } else if (luaL_checkinteger(L, 1) == WS2801_USE_HSPI) {
-            res = ws2801_init_spi(L);
+            res = ws2801_init_hspi(L);
         }
     } else {
         res = ws2801_init_gpio(L, PIN_CLK_DEFAULT, PIN_DATA_DEFAULT); 
