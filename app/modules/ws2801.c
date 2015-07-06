@@ -119,6 +119,8 @@ static int ws2801_init_lua(lua_State* L) {
             res = ws2801_init_gpio(L, pin_clk, pin_data);
         } else if (luaL_checkinteger(L, 1) == WS2801_USE_HSPI) {
             res = ws2801_init_hspi(L);
+        } else {
+            res = luaL_error(L, "wrong arg range");
         }
     } else {
         res = ws2801_init_gpio(L, PIN_CLK_DEFAULT, PIN_DATA_DEFAULT); 
