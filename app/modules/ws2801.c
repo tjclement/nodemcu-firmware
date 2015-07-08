@@ -5,6 +5,7 @@
 #include "lrotable.h"
 #include "c_stdlib.h"
 #include "c_string.h"
+#include "driver/spi.h"
 
 /**
  * Code is based on https://github.com/CHERTS/esp8266-devkit/blob/master/Espressif/examples/EspLightNode/user/ws2801.c
@@ -84,14 +85,40 @@ static u32 ws2801_init_gpio(lua_State* L, u32 pin_clk, u32 pin_data) {
     return 0;
 }
 
+static void spi_write32(u8 spi_no, u32 data) {
+    
+    while(READ_PERI_REG(SPI_CMD(spi_no))&SPI_USR);    // Correct 
+
+    // Set SPI to use 32 bits
+    WRITE_PERI_REG(
+        SPI_USER1(spi_no),
+        ((31&SPI_USR_MOSI_BITLEN)<<SPI_USR_MOSI_BITLEN_S) |
+        ((31&SPI_USR_MISO_BITLEN)<<SPI_USR_MISO_BITLEN_S));
+
+    // Is this if-case necessary?
+    // if(READ_PERI_REG(SPI_USER(spi_no))&SPI_WR_BYTE_ORDER)
+    // Copy data to W0
+    WRITE_PERI_REG(SPI_W0(spi_no), data);
+
+    // Send
+    SET_PERI_REG_MASK(SPI_CMD(spi_no), SPI_USR);
+}
+
 static void ws2801_strip_hspi(u8 const * data, u16 len) {
+    // TODO: write it a bit nicer
+    while (len>3) {
+        u32 data32 = *((u32 const *) data);
+        spi_write32(HSPI, data32);
+        len -= 4;
+        data += 4;
+    }
     while (len--) {
-        platform_spi_send_recv(1, *(data++));
+        platform_spi_send_recv(HSPI, *(data++));
     }
 }
 
 static u32 ws2801_init_hspi(lua_State* L) {
-    // do HSPI stuff
+    // Enable HSPI mode
     ws2801_hspi_mode = 1;
 
     // TODO: clock seems to be broken in app/driver/spi.c
