@@ -211,6 +211,9 @@ static int ICACHE_FLASH_ATTR ws2812_writedual_lua(lua_State* L) {
   platform_gpio_write(pin_a, 0);
   platform_gpio_mode(pin_b, PLATFORM_GPIO_OUTPUT, PLATFORM_GPIO_FLOAT);
   platform_gpio_write(pin_b, 0);
+  GPIO_REG_WRITE(GPIO_OUT_W1TC_ADDRESS, 
+    (1 << pin_num[pin_a]) |
+    (1 << pin_num[pin_b])); // Set pin a and b low
 
   // Sleep a bit in order to let the GPIO pins settle.
   // Not happy about this but it's needed.
