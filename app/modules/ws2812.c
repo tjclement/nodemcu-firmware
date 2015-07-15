@@ -127,12 +127,110 @@ static int ICACHE_FLASH_ATTR ws2812_writegrb(lua_State* L) {
   return 0;
 }
 
+
+
+
+
+
+static void ICACHE_RAM_ATTR ws2812_writedual(
+    uint8_t pin_a, uint8_t pin_b, uint8_t *pixels, uint32_t num_bytes) {
+  uint8_t *p1, *p2, *end, pix_a, pix_b, mask;
+  uint32_t t, t0h, t1h, t01h, ttot, c, start_time, pin_mask_a, pin_mask_b, bits;
+
+  pin_mask_a = 1 << pin_a;
+  pin_mask_b = 1 << pin_b;
+  p1 = pixels;
+  p2 = pixels + num_bytes / 2;
+  end = p1 + num_bytes / 2;
+  pix_a = *p1++;
+  pix_b = *p2++;
+  mask = 0x80;
+  start_time = _getCycleCount();
+  t0h  = (1000 * system_get_cpu_freq()) / 2857;  // 0.35us (spec=0.35 +- 0.15)
+  t1h  = (1000 * system_get_cpu_freq()) / 1428;  // 0.70us (spec=0.70 +- 0.15)
+  ttot = (1000 * system_get_cpu_freq()) /  800;  // 1.25us (MUST be >= 1.25)
+
+  t01h = t1h + t0h; // Time to wait when having different bits
+
+  while (true) {
+
+    while (((c = _getCycleCount()) - start_time) < ttot); // Wait for the previous bit to finish
+
+    GPIO_REG_WRITE(GPIO_OUT_W1TS_ADDRESS, pin_mask_a); // Set pin_a high
+    GPIO_REG_WRITE(GPIO_OUT_W1TS_ADDRESS, pin_mask_b); // Set pin_b high
+
+    start_time = c;
+
+    if (pix_a & mask) {
+        if (pix_b & mask) {
+            // 11;
+            while (((c = _getCycleCount()) - start_time) < t1h);  // Wait high duration
+            GPIO_REG_WRITE(GPIO_OUT_W1TC_ADDRESS, pin_mask_a);    // Set pin_a low
+            GPIO_REG_WRITE(GPIO_OUT_W1TC_ADDRESS, pin_mask_b);    // Set pin_b low
+        } else {
+            // 10;
+            while (((c = _getCycleCount()) - start_time) < t0h);  // Wait high duration
+            GPIO_REG_WRITE(GPIO_OUT_W1TC_ADDRESS, pin_mask_b);    // Set pin_b low
+            while (((c = _getCycleCount()) - start_time) < t01h); // Wait remaining time
+            GPIO_REG_WRITE(GPIO_OUT_W1TC_ADDRESS, pin_mask_a);    // Set pin_a low
+        }
+    } else {
+        if (pix_b & mask) {
+            // 01;
+            while (((c = _getCycleCount()) - start_time) < t0h);  // Wait high duration
+            GPIO_REG_WRITE(GPIO_OUT_W1TC_ADDRESS, pin_mask_a);    // Set pin_a low
+            while (((c = _getCycleCount()) - start_time) < t01h); // Wait remaining time
+            GPIO_REG_WRITE(GPIO_OUT_W1TC_ADDRESS, pin_mask_b);    // Set pin_b low
+        } else {
+            // 00;
+            while (((c = _getCycleCount()) - start_time) < t0h);  // Wait high duration
+            GPIO_REG_WRITE(GPIO_OUT_W1TC_ADDRESS, pin_mask_a);    // Set pin_a low
+            GPIO_REG_WRITE(GPIO_OUT_W1TC_ADDRESS, pin_mask_b);    // Set pin_b low
+        }
+    }
+
+    if (!(mask >>= 1)) {
+      if (p1 >= end) {
+        break;
+      }
+      pix_a  = *p1++;
+      pix_b  = *p2++;
+      mask = 0x80;
+    }
+  }
+}
+
+
+static int ICACHE_FLASH_ATTR ws2812_writedual_lua(lua_State* L) {
+  const uint8_t pin_a = luaL_checkinteger(L, 1);
+  const uint8_t pin_b = luaL_checkinteger(L, 2);
+  size_t length;
+  const char *buffer = luaL_checklstring(L, 3, &length);
+
+  // Initialize the output pins
+  platform_gpio_mode(pin_a, PLATFORM_GPIO_OUTPUT, PLATFORM_GPIO_FLOAT);
+  platform_gpio_write(pin_a, 0);
+  platform_gpio_mode(pin_b, PLATFORM_GPIO_OUTPUT, PLATFORM_GPIO_FLOAT);
+  platform_gpio_write(pin_b, 0);
+
+  // Sleep a bit in order to let the GPIO pins settle.
+  // Not happy about this but it's needed.
+  os_delay_us(10);
+
+  // Send the buffer
+  os_intr_lock();
+  ws2812_writedual(pin_num[pin_a], pin_num[pin_b], (uint8_t*) buffer, length);
+  os_intr_unlock();
+}
+
+
 #define MIN_OPT_LEVEL 2
 #include "lrodefs.h"
 const LUA_REG_TYPE ws2812_map[] =
 {
   { LSTRKEY( "writergb" ), LFUNCVAL( ws2812_writergb )},
   { LSTRKEY( "write" ), LFUNCVAL( ws2812_writegrb )},
+  { LSTRKEY( "writedual" ), LFUNCVAL( ws2812_writedual_lua )},
   { LNILKEY, LNILVAL}
 };
 
