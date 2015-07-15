@@ -135,10 +135,12 @@ static int ICACHE_FLASH_ATTR ws2812_writegrb(lua_State* L) {
 static void ICACHE_RAM_ATTR ws2812_writedual(
     uint8_t pin_a, uint8_t pin_b, uint8_t *pixels, uint32_t num_bytes) {
   uint8_t *p1, *p2, *end, pix_a, pix_b, mask;
-  uint32_t t, t0h, t1h, t01h, ttot, c, start_time, pin_mask_a, pin_mask_b, bits;
+  uint32_t t, t0h, t1h, t01h, ttot, c, start_time;
+  uint32_t pin_mask_a, pin_mask_b, pin_mask_ab, bits;
 
   pin_mask_a = 1 << pin_a;
   pin_mask_b = 1 << pin_b;
+  pin_mask_ab = pin_mask_a | pin_mask_b;
   p1 = pixels;
   p2 = pixels + num_bytes / 2;
   end = p1 + num_bytes / 2;
@@ -156,8 +158,7 @@ static void ICACHE_RAM_ATTR ws2812_writedual(
 
     while (((c = _getCycleCount()) - start_time) < ttot); // Wait for the previous bit to finish
 
-    GPIO_REG_WRITE(GPIO_OUT_W1TS_ADDRESS, pin_mask_a); // Set pin_a high
-    GPIO_REG_WRITE(GPIO_OUT_W1TS_ADDRESS, pin_mask_b); // Set pin_b high
+    GPIO_REG_WRITE(GPIO_OUT_W1TS_ADDRESS, pin_mask_ab); // Set pin a and b high
 
     start_time = c;
 
@@ -165,8 +166,7 @@ static void ICACHE_RAM_ATTR ws2812_writedual(
         if (pix_b & mask) {
             // 11;
             while (((c = _getCycleCount()) - start_time) < t1h);  // Wait high duration
-            GPIO_REG_WRITE(GPIO_OUT_W1TC_ADDRESS, pin_mask_a);    // Set pin_a low
-            GPIO_REG_WRITE(GPIO_OUT_W1TC_ADDRESS, pin_mask_b);    // Set pin_b low
+            GPIO_REG_WRITE(GPIO_OUT_W1TC_ADDRESS, pin_mask_ab);   // Set pin a and b low
         } else {
             // 10;
             while (((c = _getCycleCount()) - start_time) < t0h);  // Wait high duration
@@ -184,8 +184,7 @@ static void ICACHE_RAM_ATTR ws2812_writedual(
         } else {
             // 00;
             while (((c = _getCycleCount()) - start_time) < t0h);  // Wait high duration
-            GPIO_REG_WRITE(GPIO_OUT_W1TC_ADDRESS, pin_mask_a);    // Set pin_a low
-            GPIO_REG_WRITE(GPIO_OUT_W1TC_ADDRESS, pin_mask_b);    // Set pin_b low
+            GPIO_REG_WRITE(GPIO_OUT_W1TC_ADDRESS, pin_mask_ab);   // Set pin a and b low
         }
     }
 
