@@ -141,6 +141,14 @@
 #define ROM_MODULES_WS2801
 #endif
 
+#if defined(LUA_USE_MODULES_WS2811)
+#define MODULES_WS2811      "ws2811"
+#define ROM_MODULES_WS2811  \
+    _ROM(MODULES_WS2811, luaopen_ws2811, ws2811_map)
+#else
+#define ROM_MODULES_WS2811
+#endif
+
 #if defined(LUA_USE_MODULES_WS2812)
 #define MODULES_WS2812      "ws2812"
 #define ROM_MODULES_WS2812  \
@@ -231,6 +239,7 @@
         ROM_MODULES_OW      \
         ROM_MODULES_BIT     \
         ROM_MODULES_WS2801  \
+        ROM_MODULES_WS2811  \
         ROM_MODULES_WS2812  \
         ROM_MODULES_CJSON   \
         ROM_MODULES_CRYPTO  \
