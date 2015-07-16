@@ -132,7 +132,7 @@ static int ICACHE_FLASH_ATTR ws2812_writegrb(lua_State* L) {
 
 
 
-static void ICACHE_RAM_ATTR ws2812_writedual(
+static void ICACHE_RAM_ATTR __attribute__((optimize("O2"))) ws2812_writedual(
     uint8_t pin_a, uint8_t pin_b, uint8_t *pixels, uint32_t num_bytes) {
   uint8_t *p1, *p2, *end, pix_a, pix_b, mask;
   uint32_t t, t0h, t1h, t01h, ttot, c, start_time;
@@ -211,13 +211,6 @@ static int ICACHE_FLASH_ATTR ws2812_writedual_lua(lua_State* L) {
   platform_gpio_write(pin_a, 0);
   platform_gpio_mode(pin_b, PLATFORM_GPIO_OUTPUT, PLATFORM_GPIO_FLOAT);
   platform_gpio_write(pin_b, 0);
-  GPIO_REG_WRITE(GPIO_OUT_W1TC_ADDRESS, 
-    (1 << pin_num[pin_a]) |
-    (1 << pin_num[pin_b])); // Set pin a and b low
-
-  // Sleep a bit in order to let the GPIO pins settle.
-  // Not happy about this but it's needed.
-  os_delay_us(10);
 
   // Send the buffer
   os_intr_lock();
