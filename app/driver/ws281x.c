@@ -1,4 +1,7 @@
+#include "user_modules.h"
 #include "driver/ws281x.h"
+
+#if(defined(LUA_USE_MODULES_WS2811) || defined(LUA_USE_MODULES_WS2812))
 
 static inline uint32_t _getCycleCount(void) {
   uint32_t cycles;
@@ -53,3 +56,4 @@ void ICACHE_FLASH_ATTR ws281x_write(uint8_t pin, uint8_t *pixels, uint32_t lengt
   }
 }
 
+#endif
