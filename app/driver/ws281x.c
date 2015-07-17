@@ -3,6 +3,9 @@
 
 #if(defined(LUA_USE_MODULES_WS2811) || defined(LUA_USE_MODULES_WS2812))
 
+// Convert nano seconds to clock cycles (works both in 80 and 160MHz mode)
+#define NS_TO_CYCLES(time_ns) ((system_get_cpu_freq() * time_ns) / 1000)
+
 static inline uint32_t _getCycleCount(void) {
   uint32_t cycles;
   __asm__ __volatile__("rsr %0,ccount":"=a" (cycles));
@@ -27,12 +30,12 @@ void ICACHE_FLASH_ATTR ws281x_write(uint8_t pin, uint8_t *pixels, uint32_t lengt
   pixel = *p++;
   mask = 0x80;
   start_time = 0;
-  t0h  = (1000 * system_get_cpu_freq()) / 2857;  // 0.35us (spec=0.35 +- 0.15)
-  t1h  = (1000 * system_get_cpu_freq()) / 1429;  // 0.75us (spec=0.70 +- 0.15)
+  t0h = NS_TO_CYCLES(350);  // 0.35us (spec=0.35 +- 0.15)
+  t1h = NS_TO_CYCLES(750);  // 0.75us (spec=0.70 +- 0.15)
   if (is_ws2812) {
-    ttot = (1000 * system_get_cpu_freq()) / 800;  // 1.25us (must be >= 1.25 on ws2812)
+    ttot = NS_TO_CYCLES(1250); // 1.25us (must be >= 1.25 on ws2812)
   } else {
-    ttot = (1000 * system_get_cpu_freq()) / 667;  // 1.50us (must be >= 1.50 on ws2811)
+    ttot = NS_TO_CYCLES(1500); // 1.50us (must be >= 1.50 on ws2811)
   }
 
   while (true) {
@@ -56,4 +59,5 @@ void ICACHE_FLASH_ATTR ws281x_write(uint8_t pin, uint8_t *pixels, uint32_t lengt
   }
 }
 
+#undef NS_TO_CYCLES
 #endif
