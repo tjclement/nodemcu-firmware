@@ -38,6 +38,8 @@ void ICACHE_FLASH_ATTR ws281x_write(uint8_t pin, uint8_t *pixels, uint32_t lengt
     ttot = NS_TO_CYCLES(1500); // 1.50us (must be >= 1.50 on ws2811)
   }
 
+  GPIO_REG_WRITE(GPIO_OUT_W1TC_ADDRESS, pin_mask); // Set pin low
+
   while (true) {
     if (pixel & mask) {
         t = t1h;
