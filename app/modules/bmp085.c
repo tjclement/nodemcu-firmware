@@ -51,15 +51,16 @@ static int ICACHE_FLASH_ATTR bmp085_init(lua_State* L) {
     uint32_t sda;
     uint32_t scl;
 
-    if (lua_isnumber(L, 1) && lua_isnumber(L, 2)) {
-        sda = luaL_checkinteger(L, 1);
-        scl = luaL_checkinteger(L, 2);
-    } else {
+    if (!lua_isnumber(L, 1) || !lua_isnumber(L, 2)) {
         return luaL_error(L, "wrong arg range");
     }
 
-    if (scl == 0 || sda == 0)
+    sda = luaL_checkinteger(L, 1);
+    scl = luaL_checkinteger(L, 2);
+
+    if (scl == 0 || sda == 0) {
         return luaL_error(L, "no i2c for D0");
+    }
 
     platform_i2c_setup(bmp085_i2c_id, sda, scl, PLATFORM_I2C_SPEED_SLOW);
 
@@ -81,9 +82,14 @@ static int ICACHE_FLASH_ATTR bmp085_init(lua_State* L) {
 static int16_t ICACHE_FLASH_ATTR bmp085_temperature_raw(void) {
     int16_t t, X1, X2;
 
+    platform_i2c_send_start(bmp085_i2c_id);
+    platform_i2c_send_address(bmp085_i2c_id, bmp085_i2c_addr, PLATFORM_I2C_DIRECTION_TRANSMITTER);
     platform_i2c_send_byte(bmp085_i2c_id, 0xF4);
     platform_i2c_send_byte(bmp085_i2c_id, 0x2E);
+    platform_i2c_send_stop(bmp085_i2c_id);
+
     os_delay_us(10000); // Really needed?
+
     t = r16(bmp085_i2c_id, 0xF6);
     X1 = (t - bmp085_data.AC6) * bmp085_data.AC5 / 32768;
     X2 = bmp085_data.MC * 2048 / (X1 + bmp085_data.MD);
